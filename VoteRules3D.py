@@ -140,6 +140,10 @@ class VoteResult3D:
                         distance = math.sqrt((voter.x - candidate.x) ** 2 + (voter.y - candidate.y) ** 2 + (voter.z - candidate.z) ** 2)
                         distances[candidate] = distance         
                     sorted_dict = sorted(distances, key = distances.get)
+                    #something like: if sorted_dict[0] is OPT:
+                        #move 2nd_OPT to last place
+                    #else:
+                        #move OPT to last place
                     self.ballots.append(sorted_dict)
                 #if strat_vote_type == "compromise":
                 
@@ -376,6 +380,7 @@ def main():
     print(test.pluralityVeto())
     print(test.condorcetCheck(test.plurality()))
     print(test.condorcetCheck(test.copeland()))
+    print(test.OPTcandidate)
     
 if __name__ == "__main__":  
     main()
