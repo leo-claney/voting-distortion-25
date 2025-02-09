@@ -33,7 +33,7 @@ class SCandidate3D:
         return "Candidate "+str(self.id)
     
 class VoteResult3D:
-    def __init__(self, n, m, dimension = "1D", distribution="normal",strat_voter_percentage=0):
+    def __init__(self, n, m, dimension = "1D", distribution="normal",strat_voter_percentage=0,strat_vote_type="burial"):
         self.voters = []      #size of voters is n
         self.candidates = []  #size of candidates is m
         self.distribution = distribution
@@ -133,7 +133,16 @@ class VoteResult3D:
         self.ballots = []
         for voter in self.voters:
             if count < num_of_strat_voters:
-                #Vote strategically
+                if strat_vote_type == "burial":
+                    #currently sorts as usual, simply need to add the putting of the optimal/second to optimal last
+                    distances = {}
+                    for candidate in self.candidates:
+                        distance = math.sqrt((voter.x - candidate.x) ** 2 + (voter.y - candidate.y) ** 2 + (voter.z - candidate.z) ** 2)
+                        distances[candidate] = distance         
+                    sorted_dict = sorted(distances, key = distances.get)
+                    self.ballots.append(sorted_dict)
+                #if strat_vote_type == "compromise":
+                
                 count += 1
             else:
                 distances = {}
