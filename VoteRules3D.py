@@ -33,13 +33,15 @@ class SCandidate3D:
         return "Candidate "+str(self.id)
     
 class VoteResult3D:
-    def __init__(self, n, m, dimension = "1D", distribution="normal",strat_voter_percentage=0,strat_vote_type="burial"):
+    def __init__(self, n, m, dimension = "1D", distribution="normal",strategy = True,strat_voter_percentage=0,strat_vote_type="burial"):
         self.voters = []      #size of voters is n
         self.candidates = []  #size of candidates is m
         self.distribution = distribution
         self.dimension = dimension
         self.SV_percentage = strat_voter_percentage
-        self.SV_type = strat_vote_type
+        self.SV_type = strat_vote_type       
+        self.ballots = []
+        self.strategy_ballots = []
 
         #generate random coordinates of voters and candidates for different distributions
         if self.distribution == "normal":
@@ -127,40 +129,75 @@ class VoteResult3D:
                 self.minDistance = sumDistance
                 self.OPTcandidate = candidate
        
-        #get preference profile of each voter given a set of candidates
-        #Get the number of strategic voters
-        num_of_strat_voters = int(n * strat_voter_percentage)
-        count = 0
-        self.ballots = []
-        for voter in self.voters:
-            if count < num_of_strat_voters:
-                if self.SV_type == "burial":
-                    #currently sorts as usual, simply need to add the putting of the optimal/second to optimal last
+        if strategy:
+            #get preference profile of each voter given a set of candidates
+            #Get the number of strategic voters
+            num_of_strat_voters = int(n * strat_voter_percentage)
+            count = 0
+            strongestCandidates = self.getStrongCandidates()
+            for voter in self.voters:
+                if count < num_of_strat_voters:
+                    if self.SV_type == "burial":
+                        #currently sorts as usual, simply need to add the putting of the optimal/second to optimal last          
+                        distances = {}
+                        for candidate in self.candidates:
+                            distance = math.sqrt((voter.x - candidate.x) ** 2 + (voter.y - candidate.y) ** 2 + (voter.z - candidate.z) ** 2)
+                            distances[candidate] = distance         
+                        sorted_dict = sorted(distances, key = distances.get)
+                        #something like: if sorted_dict[0] is strongest candidate:
+                            #move 2nd_OPT to last place
+                        #else:
+                            #move OPT to last place
+                        if sorted_dict[0] == strongestCandidates[0][0]:
+                            sorted_dict.remove(strongestCandidates[1][0])
+                            sorted_dict.append(strongestCandidates[1][0])
+                        else:
+                            sorted_dict.remove(strongestCandidates[0][0])
+                            sorted_dict.append(strongestCandidates[0][0])
+                        self.strategy_ballots.append(sorted_dict)
+                    #if self.SV_type == "compromise":               
+                    count += 1
+                else:
                     distances = {}
                     for candidate in self.candidates:
                         distance = math.sqrt((voter.x - candidate.x) ** 2 + (voter.y - candidate.y) ** 2 + (voter.z - candidate.z) ** 2)
                         distances[candidate] = distance         
                     sorted_dict = sorted(distances, key = distances.get)
-                    #something like: if sorted_dict[0] is OPT:
-                        #move 2nd_OPT to last place
-                    #else:
-                        #move OPT to last place
-                    self.ballots.append(sorted_dict)
-                #if self.SV_type == "compromise":
-                
-                count += 1
-            else:
-                distances = {}
-                for candidate in self.candidates:
-                    distance = math.sqrt((voter.x - candidate.x) ** 2 + (voter.y - candidate.y) ** 2 + (voter.z - candidate.z) ** 2)
-                    distances[candidate] = distance         
-                sorted_dict = sorted(distances, key = distances.get)
-                self.ballots.append(sorted_dict)
-            
+                    self.strategy_ballots.append(sorted_dict)
 
-    def plurality(self):
+        # Grab the actual ballots not using strategic voting
+        for voter in self.voters:
+            distances = {}
+            for candidate in self.candidates:
+                distance = math.sqrt((voter.x - candidate.x) ** 2 + (voter.y - candidate.y) ** 2 + (voter.z - candidate.z) ** 2)
+                distances[candidate] = distance         
+            sorted_dict = sorted(distances, key = distances.get)
+            self.ballots.append(sorted_dict)
+                
+    def getStrongCandidates(self):
+        strongCandidates = {}
+        for voter in self.voters:
+            minDis = float('inf')
+            bestCandidate = None
+            for candidate in self.candidates:
+                distance = math.sqrt((voter.x - candidate.x) ** 2 + (voter.y - candidate.y) ** 2 + (voter.z - candidate.z) ** 2)
+                if distance < minDis:
+                    minDis = distance
+                    bestCandidate = candidate
+            if bestCandidate in strongCandidates:
+                strongCandidates[bestCandidate] += 1
+            else:
+                strongCandidates[bestCandidate] = 1
+        sorted_dict = sorted(strongCandidates.items(), key = lambda kv: kv[1], reverse = True)
+        return sorted_dict
+
+    def plurality(self,strategy=False):
         votes = {}
-        for ballot in self.ballots:
+        if strategy:
+            ballots = self.strategy_ballots
+        else:
+            ballots = self.ballots
+        for ballot in ballots:
             if ballot[0] in votes:
                 votes[ballot[0]] += 1
             else:
@@ -168,9 +205,13 @@ class VoteResult3D:
         self.sorted_dict = sorted(votes.items(), key = lambda kv: kv[1], reverse = True)      
         return self.sorted_dict[0][0]
 
-    def borda(self):
+    def borda(self,strategy=False):
         points = {}
-        for ballot in self.ballots:
+        if strategy:
+            ballots = self.strategy_ballots
+        else:
+            ballots = self.ballots
+        for ballot in ballots:
             n = len(ballot)
             i = 1
             for candidate in ballot:
@@ -182,9 +223,13 @@ class VoteResult3D:
         sorted_dict = sorted(points.items(), key = lambda kv: kv[1], reverse = True)     
         return sorted_dict[0][0]
 
-    def STV(self):
+    def STV(self, strategy=False):
         votes = []
-        for ballot in self.ballots:
+        if strategy:
+            ballots = self.strategy_ballots
+        else:
+            ballots = self.ballots
+        for ballot in ballots:
             vote = Vote(ballot)
             votes.append(vote)
         election = Election(votes)
@@ -193,13 +238,17 @@ class VoteResult3D:
         
         return winner
     
-    def head_to_head(self,c_type=0.5):
+    def head_to_head(self,strategy=False,c_type=0.5):
         points = {}
         score1 = 0
         score2 = 0
+        if strategy:
+            ballots = self.strategy_ballots
+        else:
+            ballots = self.ballots
         for i in range(len(self.candidates)):
             for j in range(i + 1, len(self.candidates)):
-                for ballot in self.ballots:
+                for ballot in ballots:
                     found = False
                     k = 0
                     while not found:
@@ -240,16 +289,20 @@ class VoteResult3D:
             self.condorcetWinner = sorted_dict[0][0]
         return sorted_dict
         
-    def copeland(self,c_type=0.5):
-        sorted_dict = self.head_to_head(c_type)
+    def copeland(self,strategy=False,c_type=0.5):
+        sorted_dict = self.head_to_head(strategy,c_type)
         return sorted_dict[0][0]
 
 
 
-    def pluralityVeto(self):
+    def pluralityVeto(self,strategy=False):
         # plurality stage - each candidate is given score equals the number of times they are first-choice
         points = {}
-        for ballot in self.ballots:
+        if strategy:
+            ballots = self.strategy_ballots
+        else:
+            ballots = self.ballots
+        for ballot in ballots:
             if ballot[0] in points:
                 points[ballot[0]] += 1
             else:
@@ -258,7 +311,7 @@ class VoteResult3D:
         # veto stage 
         numToRemove = len(points) - 1
         while numToRemove>0:
-            for ballot in self.ballots:
+            for ballot in ballots:
                 # find the bottom-choice candidate among the the standing one
                 k = -1
                 while not ballot[k] in points:
@@ -375,13 +428,28 @@ class VoteResult3D:
             return candidate == self.condorcetWinner
         else:
             return None
+        
+
+def test_stratVoting(strategy = "burial"):
+    test = VoteResult3D(200, 15, "1D", "normal",True,0.3,strategy)
+    print(f'Plurality winner with strategy: {test.plurality(True)}')
+    print(f'Plurality winner without strategy: {test.plurality()}')
+    print(f'Borda winner with strategy: {test.borda(True)}')
+    print(f'Borda winner without strategy: {test.borda()}')
+    print(f'Copeland winner with strategy: {test.copeland(True)}')
+    print(f'Copeland winner without strategy: {test.copeland()}')
+    print(f'STV winner with strategy: {test.STV(True)}')
+    print(f'STV winner without strategy: {test.STV()}')
+    print(f'Plurality-Veto winner with strategy: {test.pluralityVeto(True)}')
+    print(f'Plurality-Veto winner without strategy: {test.pluralityVeto()}')
 
 def main():
-    test = VoteResult3D(200, 15, "1D", "normal")
-    print(test.pluralityVeto())
-    print(test.condorcetCheck(test.plurality()))
-    print(test.condorcetCheck(test.copeland()))
-    print(test.OPTcandidate)
+    # test = VoteResult3D(200, 15, "1D", "normal")
+    # print(test.pluralityVeto())
+    # print(test.condorcetCheck(test.plurality()))
+    # print(test.condorcetCheck(test.copeland()))
+    # print(test.OPTcandidate)
+    test_stratVoting("burial")
     
 if __name__ == "__main__":  
     main()
