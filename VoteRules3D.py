@@ -39,6 +39,7 @@ class VoteResult3D:
         self.distribution = distribution
         self.dimension = dimension
         self.SV_percentage = strat_voter_percentage
+        self.SV_type = strat_vote_type
 
         #generate random coordinates of voters and candidates for different distributions
         if self.distribution == "normal":
@@ -133,7 +134,7 @@ class VoteResult3D:
         self.ballots = []
         for voter in self.voters:
             if count < num_of_strat_voters:
-                if strat_vote_type == "burial":
+                if self.SV_type == "burial":
                     #currently sorts as usual, simply need to add the putting of the optimal/second to optimal last
                     distances = {}
                     for candidate in self.candidates:
@@ -145,7 +146,7 @@ class VoteResult3D:
                     #else:
                         #move OPT to last place
                     self.ballots.append(sorted_dict)
-                #if strat_vote_type == "compromise":
+                #if self.SV_type == "compromise":
                 
                 count += 1
             else:
