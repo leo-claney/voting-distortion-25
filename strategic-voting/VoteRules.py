@@ -32,7 +32,7 @@ class SCandidate3D:
     def __str__(self):
         return "Candidate "+str(self.id)
     
-class VoteResult3D:
+class VoteResult:
     def __init__(self, n, m, dimension = "1D", distribution="normal",strategy = None,strat_voter_percentage=0):
         self.voters = []      #size of voters is n
         self.candidates = []  #size of candidates is m
@@ -448,7 +448,7 @@ class VoteResult3D:
         
 
 def test_stratVoting(strategy = "compromise"):
-    test = VoteResult3D(200, 15, "1D", "normal",strategy,0)
+    test = VoteResult(200, 15, "1D", "normal",strategy,0)
     print(f'Optimal candidate: {test.OPTcandidate}')
     print(f'Plurality winner with strategy: {test.plurality(True)}')
     print(f'Plurality winner without strategy: {test.plurality()}')
@@ -462,7 +462,7 @@ def test_stratVoting(strategy = "compromise"):
     print(f'Plurality-Veto winner without strategy: {test.pluralityVeto()}')
 
 def main():
-    # test = VoteResult3D(200, 15, "1D", "normal")
+    # test = VoteResult(200, 15, "1D", "normal")
     # print(test.pluralityVeto())
     # print(test.condorcetCheck(test.plurality()))
     # print(test.condorcetCheck(test.copeland()))
