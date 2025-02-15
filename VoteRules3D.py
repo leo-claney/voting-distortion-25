@@ -161,7 +161,8 @@ class VoteResult3D:
                             sorted_dict.insert(0,strongestCandidates[1][0]) 
                         else:
                             sorted_dict.remove(strongestCandidates[0][0])
-                            sorted_dict.insert(0,strongestCandidates[0][0])  
+                            sorted_dict.insert(0,strongestCandidates[0][0]) 
+                        self.strategy_ballots.append(sorted_dict) 
 
                     count += 1
                 else:
