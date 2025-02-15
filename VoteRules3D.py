@@ -129,7 +129,6 @@ class VoteResult3D:
                 self.minDistance = sumDistance
                 self.OPTcandidate = candidate
        
-        if strategy:
             #get preference profile of each voter given a set of candidates
             #Get the number of strategic voters
             num_of_strat_voters = math.floor(n * strat_voter_percentage)
@@ -149,7 +148,7 @@ class VoteResult3D:
                         else:
                             sorted_dict.remove(strongestCandidates[0][0])
                             sorted_dict.append(strongestCandidates[0][0])
-                        self.strategy_ballots.append(sorted_dict)
+                        self.ballots.append(sorted_dict)
                     if self.SV_type == "compromise": 
                         distances = {}
                         for candidate in self.candidates:
@@ -162,7 +161,7 @@ class VoteResult3D:
                         else:
                             sorted_dict.remove(strongestCandidates[0][0])
                             sorted_dict.insert(0,strongestCandidates[0][0]) 
-                        self.strategy_ballots.append(sorted_dict) 
+                        self.ballots.append(sorted_dict) 
 
                     count += 1
                 else:
@@ -182,15 +181,6 @@ class VoteResult3D:
                 sorted_dict = sorted(distances, key = distances.get)
                 self.ballots.append(sorted_dict)
                 self.strategy_ballots.append(sorted_dict)
-
-        # Grab the actual ballots not using strategic voting
-        for voter in self.voters:
-            distances = {}
-            for candidate in self.candidates:
-                distance = math.sqrt((voter.x - candidate.x) ** 2 + (voter.y - candidate.y) ** 2 + (voter.z - candidate.z) ** 2)
-                distances[candidate] = distance         
-            sorted_dict = sorted(distances, key = distances.get)
-            self.ballots.append(sorted_dict)
                 
     def getStrongCandidates(self):
         strongCandidates = {}
@@ -211,10 +201,7 @@ class VoteResult3D:
 
     def plurality(self,strategy=False):
         votes = {}
-        if strategy:
-            ballots = self.strategy_ballots
-        else:
-            ballots = self.ballots
+        ballots = self.ballots
         for ballot in ballots:
             if ballot[0] in votes:
                 votes[ballot[0]] += 1
@@ -225,10 +212,7 @@ class VoteResult3D:
 
     def borda(self,strategy=False):
         points = {}
-        if strategy:
-            ballots = self.strategy_ballots
-        else:
-            ballots = self.ballots
+        ballots = self.ballots
         for ballot in ballots:
             n = len(ballot)
             i = 1
@@ -243,10 +227,7 @@ class VoteResult3D:
 
     def STV(self, strategy=False):
         votes = []
-        if strategy:
-            ballots = self.strategy_ballots
-        else:
-            ballots = self.ballots
+        ballots = self.ballots
         for ballot in ballots:
             vote = Vote(ballot)
             votes.append(vote)
@@ -260,10 +241,7 @@ class VoteResult3D:
         points = {}
         score1 = 0
         score2 = 0
-        if strategy:
-            ballots = self.strategy_ballots
-        else:
-            ballots = self.ballots
+        ballots = self.ballots
         for i in range(len(self.candidates)):
             for j in range(i + 1, len(self.candidates)):
                 for ballot in ballots:
@@ -316,10 +294,7 @@ class VoteResult3D:
     def pluralityVeto(self,strategy=False):
         # plurality stage - each candidate is given score equals the number of times they are first-choice
         points = {}
-        if strategy:
-            ballots = self.strategy_ballots
-        else:
-            ballots = self.ballots
+        ballots = self.ballots
         for ballot in ballots:
             if ballot[0] in points:
                 points[ballot[0]] += 1
