@@ -5,6 +5,11 @@ import random
 from vote import Vote
 from election import Election
 
+class Candidate:
+    def __init__(self, idx:int, coord:int):
+        self.idx = idx
+        self.coord = coord
+
 class STV_GA:
     def __init__(self, m: int = 3, n: int = 4, population_size: int = 25):
         self.num_of_candidates = m
@@ -34,45 +39,91 @@ class STV_GA:
         for i in range(self.num_of_voters+self.num_of_candidates):
             individual.append(random.randint(1,self.allele_len))
         return individual
+
+    def get_winner(self, ballots, candidates):
+        """
+        Get the winner of an election
+        """
+        winner = None
+        threshold = len(ballots)/2
+        while winner is None:
+            print(ballots)
+            if len(ballots[0]) == 1:
+                winner = ballots[0][0]
+                break
+            num_votes = {cand.idx: 0 for cand in candidates}
+            for ballot in ballots:
+                num_votes[ballot[0]] += 1
+            
+            min_votes = float('inf')
+            min_cand = None
+            for cand, votes in num_votes.items():
+                if votes > threshold:
+                    winner = cand
+                    break
+                elif votes < min_votes:
+                    min_votes = votes
+                    min_cand = cand
+
+            print(f'Eliminating candidate {min_cand}')
+            for ballot in ballots:
+                print(ballot)
+                ballot.remove(min_cand)
+            print(candidates)
+            candidates.remove(min_cand)
+
+        return winner
+
     
     def run_stv(self, individual):
         """
         Run STV on an individual
         """
-        candidates = individual[:self.num_of_candidates]
+        candidates = []
+        for i in range(individual[:self.num_of_candidates]):
+            cand = Candidate(i, individual[i])
+            candidates.append(cand)
         voters = individual[self.num_of_candidates:]
 
         # Get the OPT candidate and social costs
         social_costs = {}
         minDistance = float('inf')
         OPTcandidate = candidates[0]
-        for i in range(len(candidates)):
+        for cand in candidates:
             sumDistance = 0
             for voter in voters:
-                distance = abs(candidate - voter)
+                distance = abs(cand.coord - voter)
                 sumDistance += distance
             if sumDistance < minDistance:
                 minDistance = sumDistance
-                OPTcandidate = candidate
-            social_costs[candidate] = sumDistance
+                OPTcandidate = cand
+            social_costs[cand.idx] = sumDistance
 
         # Generate ballots
         ballots = []
         for voter in voters:
             distances = {}
-            for candidate in candidates:
-                distance = abs(candidate - voter)
-                distances[candidate] = distance         
+            for cand in candidates:
+                distance = abs(cand.coord - voter)
+                distances[cand.idx] = distance         
             sorted_dict = sorted(distances, key = distances.get)
             ballots.append(sorted_dict)
+        # print(ballots)
 
-        votes = []
-        for ballot in ballots:
-            vote = Vote(ballot)
-            votes.append(vote)
-        election = Election(votes)
-        election.run_election()
-        winner = election.winner
+        # Run STV
+        winner = self.get_winner(ballots, candidates)
+        distortion = social_costs[winner.idx] / social_costs[OPTcandidate.idx]
+        return winner, social_costs, distortion
+
+        # votes = []
+        # for ballot in ballots:
+        #     vote = Vote(ballot)
+        #     votes.append(vote)
+        # election = Election(votes)
+        # election.run_election()
+        # winner = election.winner
+
+        # return winner, social_costs
 
     def fitness(self, individual):
         """
@@ -157,6 +208,12 @@ def main():
         stv.build_next_generation()
         print()
     print(f'Max fitness: {max_fitness} at generation {best_generation}')
+
+    # stv.run_stv(fittest)
+    winner, social_costs, distortion = stv.run_stv(fittest)
+    print(f'Winner: {winner}')
+    print(f'Social Costs: {social_costs}')
+    print(f'Distortion: {distortion}')
 
 if __name__ == "__main__":
     main()
