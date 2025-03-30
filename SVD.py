@@ -9,7 +9,7 @@ style.use('tableau-colorblind10')
 style.use('seaborn-v0_8-paper')
 
 # Read the output file
-df = pd.read_csv("bimodal_burial_1D.csv")
+df = pd.read_csv("uniform_compromise_1D.csv")
 
 # Convert relevant columns to numeric
 columns_to_convert = [
@@ -49,7 +49,7 @@ plt.plot(psv_val, distortion_by_psv["PluralityVeto_distortion"], marker='o', lab
 # Customize the plot
 plt.xlabel("Percent of Strategic Voters")
 plt.ylabel("Average Distortion")
-plt.title("Distortion by Percent of Strategic Voters (n=200, m=5, dist=bimodal, strat=burial, dim=1D)")
+plt.title("Distortion by Percent of Strategic Voters (n=200, m=5, dist=uniform, strat=compromise, dim=1D)")
 plt.xticks(np.arange(0, 1.1, 0.1))  # Set x-axis ticks from 0 to 1 with steps of 0.1
 plt.xlim(0, 1)  # Ensure the x-axis ends at 1
 plt.ylim(bottom=1)  # Distortion cannot be less than 1
