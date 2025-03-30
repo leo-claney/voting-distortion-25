@@ -33,15 +33,14 @@ class SCandidate3D:
         return "Candidate "+str(self.id)
     
 class VoteResult3D:
-    def __init__(self, n, m, dimension = "1D", distribution="normal",strategy = None,strat_voter_percentage=0):
+    def __init__(self, n, m, dimension = "1D", distribution="normal",strategy = None,PSV=0):
         self.voters = []      #size of voters is n
         self.candidates = []  #size of candidates is m
         self.distribution = distribution
         self.dimension = dimension
-        self.SV_percentage = strat_voter_percentage
-        self.SV_type = strategy       
-        self.ballots = []
-        self.strategy_ballots = []
+        self.PSV = PSV
+        self.strategy = strategy   
+        self.ballots = []    
 
         #generate random coordinates of voters and candidates for different distributions
         if self.distribution == "normal":
@@ -129,58 +128,35 @@ class VoteResult3D:
                 self.minDistance = sumDistance
                 self.OPTcandidate = candidate
        
-            #get preference profile of each voter given a set of candidates
-            #Get the number of strategic voters
-            num_of_strat_voters = math.floor(n * strat_voter_percentage)
+            num_of_strat_voters = n * self.PSV
             count = 0
             strongestCandidates = self.getStrongCandidates()
+
             for voter in self.voters:
+                distances = {}
+                for candidate in self.candidates:
+                    distance = math.sqrt((voter.x - candidate.x) ** 2 + (voter.y - candidate.y) ** 2 + (voter.z - candidate.z) ** 2)
+                    distances[candidate] = distance         
+                sorted_dict = sorted(distances, key = distances.get)
+
                 if count < num_of_strat_voters:
-                    if self.SV_type == "burial":         
-                        distances = {}
-                        for candidate in self.candidates:
-                            distance = math.sqrt((voter.x - candidate.x) ** 2 + (voter.y - candidate.y) ** 2 + (voter.z - candidate.z) ** 2)
-                            distances[candidate] = distance         
-                        sorted_dict = sorted(distances, key = distances.get)
+                    if self.strategy == "burial":
                         if sorted_dict[0] == strongestCandidates[0][0]:
                             sorted_dict.remove(strongestCandidates[1][0])
                             sorted_dict.append(strongestCandidates[1][0])
                         else:
                             sorted_dict.remove(strongestCandidates[0][0])
                             sorted_dict.append(strongestCandidates[0][0])
-                        self.ballots.append(sorted_dict)
-                    if self.SV_type == "compromise": 
-                        distances = {}
-                        for candidate in self.candidates:
-                            distance = math.sqrt((voter.x - candidate.x) ** 2 + (voter.y - candidate.y) ** 2 + (voter.z - candidate.z) ** 2)
-                            distances[candidate] = distance
-                        sorted_dict = sorted(distances, key = distances.get)
+                    elif self.strategy == "compromise": 
                         if sorted_dict[-1] == strongestCandidates[0][0]:
                             sorted_dict.remove(strongestCandidates[1][0])
                             sorted_dict.insert(0,strongestCandidates[1][0]) 
                         else:
                             sorted_dict.remove(strongestCandidates[0][0])
                             sorted_dict.insert(0,strongestCandidates[0][0]) 
-                        self.ballots.append(sorted_dict) 
-
                     count += 1
-                else:
-                    distances = {}
-                    for candidate in self.candidates:
-                        distance = math.sqrt((voter.x - candidate.x) ** 2 + (voter.y - candidate.y) ** 2 + (voter.z - candidate.z) ** 2)
-                        distances[candidate] = distance         
-                    sorted_dict = sorted(distances, key = distances.get)
-                    self.ballots.append(sorted_dict)
-                
-                count += 1
-            else:
-                distances = {}
-                for candidate in self.candidates:
-                    distance = math.sqrt((voter.x - candidate.x) ** 2 + (voter.y - candidate.y) ** 2 + (voter.z - candidate.z) ** 2)
-                    distances[candidate] = distance         
-                sorted_dict = sorted(distances, key = distances.get)
                 self.ballots.append(sorted_dict)
-                self.strategy_ballots.append(sorted_dict)
+            
                 
     def getStrongCandidates(self):
         strongCandidates = {}
@@ -199,7 +175,7 @@ class VoteResult3D:
         sorted_dict = sorted(strongCandidates.items(), key = lambda kv: kv[1], reverse = True)
         return sorted_dict
 
-    def plurality(self,strategy=False):
+    def plurality(self):
         votes = {}
         ballots = self.ballots
         for ballot in ballots:
@@ -210,7 +186,7 @@ class VoteResult3D:
         self.sorted_dict = sorted(votes.items(), key = lambda kv: kv[1], reverse = True)      
         return self.sorted_dict[0][0]
 
-    def borda(self,strategy=False):
+    def borda(self):
         points = {}
         ballots = self.ballots
         for ballot in ballots:
@@ -225,7 +201,7 @@ class VoteResult3D:
         sorted_dict = sorted(points.items(), key = lambda kv: kv[1], reverse = True)     
         return sorted_dict[0][0]
 
-    def STV(self, strategy=False):
+    def STV(self):
         votes = []
         ballots = self.ballots
         for ballot in ballots:
@@ -237,7 +213,7 @@ class VoteResult3D:
         
         return winner
     
-    def head_to_head(self,strategy=False,c_type=0.5):
+    def head_to_head(self,c_type=0.5):
         points = {}
         score1 = 0
         score2 = 0
@@ -285,13 +261,13 @@ class VoteResult3D:
             self.condorcetWinner = sorted_dict[0][0]
         return sorted_dict
         
-    def copeland(self,strategy=False,c_type=0.5):
-        sorted_dict = self.head_to_head(strategy,c_type)
+    def copeland(self,c_type=0.5):
+        sorted_dict = self.head_to_head(c_type)
         return sorted_dict[0][0]
 
 
 
-    def pluralityVeto(self,strategy=False):
+    def pluralityVeto(self):
         # plurality stage - each candidate is given score equals the number of times they are first-choice
         points = {}
         ballots = self.ballots
@@ -323,76 +299,6 @@ class VoteResult3D:
         # the last standing candidate is the winner
         winner = list(points)[0]
         return winner
-
-    def getScores(self):
-        totalScores = {}
-        for voter in self.voters:
-            distances = {}
-            minDis = float('inf')
-            maxDis = 0
-
-
-            for candidate in self.candidates:
-                distance = math.sqrt((voter.x - candidate.x) ** 2 + (voter.y - candidate.y) ** 2 + (voter.z - candidate.z) ** 2)
-                distances[candidate] = int(distance)
-                if distance >= maxDis:
-                    maxDis = int(distance)
-                if distance <= minDis:
-                    minDis = int(distance)
-            disRange = maxDis - minDis
-            scale = round(disRange/6)
-            scoringMatrix = []
-            zero = list(range(maxDis-scale,maxDis+1))
-            one = list(range(maxDis-(scale*2),maxDis-scale))
-            two = list(range(maxDis-(scale*3),maxDis-(scale*2)))
-            three = list(range(maxDis-(scale*4),maxDis-(scale*3)))
-            four = list(range(maxDis-(scale*5),maxDis-(scale*4)))
-            five = list(range(minDis,maxDis-(scale*5)))
-            scoringMatrix.append(zero)
-            scoringMatrix.append(one)
-            scoringMatrix.append(two)
-            scoringMatrix.append(three)
-            scoringMatrix.append(four)
-            scoringMatrix.append(five)
-            for candidate in self.candidates:
-                dis = distances[candidate]
-                i = 0
-                for score in scoringMatrix:
-                    if dis in score:
-                        distances[candidate] = i
-                        if candidate not in totalScores:
-                            totalScores[candidate] = i
-                        else:
-                            totalScores[candidate] += i
-                    i += 1
-            voter.setScores(distances)
-        return totalScores
-
-    def runoff(self, can1,can2):
-        can1tot = 0
-        can2tot = 0
-        for voter in self.voters:
-            voterBallot = voter.scores
-            score1 = voterBallot[can1]
-            score2 = voterBallot[can2]
-            if score1 > score2:
-                can1tot += 1
-            elif score2 > score1:
-                can2tot += 1
-        if can1tot == can2tot:
-            return False
-        elif can1tot > can2tot:
-            return can1
-        else:
-            return can2
-
-    def STAR(self):
-        finalScores = self.getScores()
-        sorted_dict = sorted(finalScores, key = finalScores.get, reverse=True)
-        firstCandidate = sorted_dict[0]
-        secondCandidate = sorted_dict[1]
-        winner = self.runoff(firstCandidate, secondCandidate)
-        return winner
     
     def distortion(self,candidate):
         if not candidate:
@@ -422,29 +328,4 @@ class VoteResult3D:
         else:
             return None
         
-
-def test_stratVoting(strategy = "compromise"):
-    test = VoteResult3D(200, 15, "1D", "normal",strategy,0)
-    print(f'Optimal candidate: {test.OPTcandidate}')
-    print(f'Plurality winner with strategy: {test.plurality(True)}')
-    print(f'Plurality winner without strategy: {test.plurality()}')
-    print(f'Borda winner with strategy: {test.borda(True)}')
-    print(f'Borda winner without strategy: {test.borda()}')
-    print(f'Copeland winner with strategy: {test.copeland(True)}')
-    print(f'Copeland winner without strategy: {test.copeland()}')
-    print(f'STV winner with strategy: {test.STV(True)}')
-    print(f'STV winner without strategy: {test.STV()}')
-    print(f'Plurality-Veto winner with strategy: {test.pluralityVeto(True)}')
-    print(f'Plurality-Veto winner without strategy: {test.pluralityVeto()}')
-
-def main():
-    # test = VoteResult3D(200, 15, "1D", "normal")
-    # print(test.pluralityVeto())
-    # print(test.condorcetCheck(test.plurality()))
-    # print(test.condorcetCheck(test.copeland()))
-    # print(test.OPTcandidate)
-    test_stratVoting("burial")
-    
-if __name__ == "__main__":  
-    main()
     
